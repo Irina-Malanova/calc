@@ -1,34 +1,84 @@
 package com.example;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Scanner;
-
 public class Calculator {
-    private final static String OPERATIONS[] = {"+", "-", "*", "/", "(", ")"};
+    private final String[] tokens;
+    private int pos = 0;
 
-    public static void main(String[] args) {
-        while (true) {
-            Scanner reader = new Scanner(System.in);
-            System.out.print("Enter expression('/'-exit):");
-            String nextLine = reader.nextLine();
-            if(nextLine.equals("/")) break;
-            RecursiveDescentParser recursiveDescentParser = new RecursiveDescentParser(preparate(nextLine));
-            System.out.println(" = " + recursiveDescentParser.parse());
-        }
+    public Calculator(String[] tokens) {
+        this.tokens = tokens;
     }
 
-    private static String[] preparate(String input) {
+    // E -> T±T±T±T± ... ±T
+    public Double expression() {
+        Double first = term();
 
-        for (String operator : OPERATIONS) {
-            String operatorForReplacement = " " + operator + " ";
-            input = input.replace(operator, operatorForReplacement);
+        while (pos < tokens.length) {
+            String operator = tokens[pos];
+            if (!operator.equals("+") && !operator.equals("-")) {
+                break;
+            } else {
+                pos++;
+            }
+
+            Double second = term();
+            if (operator.equals("+")) {
+                first += second;
+            } else {
+                first -= second;
+            }
         }
-        String[] tokens = input.split(" ");
-        List<String> list = new ArrayList<>(Arrays.asList(tokens));
-        list.removeAll(Arrays.asList(""));
-        String[] tokens_new = new String[list.size()];
-        return list.toArray(tokens_new);
+        return first;
+    }
+
+    // T -> F*/F*/F*/*/ ... */F
+    private Double term() {
+        Double first = factor();
+
+        while (pos < tokens.length) {
+            String operator = tokens[pos];
+
+            if (!operator.equals("*") && !operator.equals("/")) {
+                break;
+            } else {
+                pos++;
+            }
+
+            Double second = factor();
+            if (operator.equals("*")) {
+                first *= second;
+            } else {
+                first /= second;
+            }
+        }
+        return first;
+    }
+
+    // F -> N | (E)
+    private Double factor() {
+        String next = tokens[pos];
+        if (next.equals("-")) {
+            pos++;
+            next = "-" + tokens[pos];
+        }
+        Double result;
+        if (next.equals("(")) {
+            pos++;
+            result = expression();
+            String closingBracket;
+            if (pos < tokens.length) {
+                closingBracket = tokens[pos];
+            } else {
+                throw new IllegalStateException("Unexpected end of expression");
+            }
+            if (closingBracket.equals(")")) {
+                pos++;
+                return result;
+            }
+            throw new IllegalStateException("')' expected but " + closingBracket);
+        }
+
+        pos++;
+
+        return Double.parseDouble(next);
     }
 }
